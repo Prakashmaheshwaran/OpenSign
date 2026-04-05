@@ -1,5 +1,4 @@
 services:
-  # MongoDB Database
   mongo:
     image: mongo:latest
     container_name: opensign-mongo
@@ -13,7 +12,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # OpenSign Backend (Parse Server)
   server:
     image: opensign/opensignserver:main
     container_name: opensign-server
@@ -21,20 +19,13 @@ services:
       - opensign-files:/usr/src/app/files
     environment:
       - NODE_ENV=production
-      - SERVER_URL=${HOST_URL:-http://localhost}/api/app
-      - PUBLIC_URL=${HOST_URL:-http://localhost}
+      - SERVER_URL=${HOST_URL}/api/app
+      - PUBLIC_URL=${HOST_URL}
       - APP_ID=${APP_ID:-opensign123456}
-      - MASTER_KEY=${MASTER_KEY:-change-this-to-secure-key}
+      - MASTER_KEY=${MASTER_KEY:-change-this-key}
       - MONGODB_URI=mongodb://mongo:27017/opensign
       - PARSE_MOUNT=/app
-      - DO_SPACE=${DO_SPACE:-}
-      - DO_ENDPOINT=${DO_ENDPOINT:-}
-      - DO_ACCESS_KEY_ID=${DO_ACCESS_KEY_ID:-}
-      - DO_SECRET_ACCESS_KEY=${DO_SECRET_ACCESS_KEY:-}
-      - DO_REGION=${DO_REGION:-us-west}
-      - MAILGUN_API_KEY=${MAILGUN_API_KEY:-}
-      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN:-}
-      - MAILGUN_SENDER=${MAILGUN_SENDER:-}
+      - USE_LOCAL=TRUE
       - SMTP_ENABLE=${SMTP_ENABLE:-}
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-}
@@ -54,13 +45,12 @@ services:
       retries: 3
       start_period: 40s
 
-  # OpenSign Frontend (React)
   client:
     image: opensign/opensign:main
     container_name: opensign-client
     environment:
-      - PUBLIC_URL=${HOST_URL:-http://localhost}
-      - REACT_APP_SERVERURL=${HOST_URL:-http://localhost}/api/app
+      - PUBLIC_URL=${HOST_URL}
+      - REACT_APP_SERVERURL=${HOST_URL}/api/app
       - REACT_APP_APPID=${APP_ID:-opensign123456}
       - GENERATE_SOURCEMAP=false
       - REACT_APP_GTM=${REACT_APP_GTM:-}
@@ -69,12 +59,18 @@ services:
         condition: service_healthy
     networks:
       - opensign-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+
+  caddy:
+    image: caddy:latest
+    container_name: opensign-caddy
+    volumes:
+      - ./Caddyfile.coolify:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - client
+    networks:
+      - opensign-network
 
 networks:
   opensign-network:
@@ -83,3 +79,5 @@ networks:
 volumes:
   mongo-data:
   opensign-files:
+  caddy_data:
+  caddy_config:
