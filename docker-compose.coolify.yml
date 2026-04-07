@@ -6,11 +6,6 @@ services:
       - mongo-data:/data/db
     networks:
       - opensign-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   server:
     image: opensign/opensignserver:main
@@ -34,16 +29,19 @@ services:
       - PFX_BASE64=${PFX_BASE64:-}
       - PASS_PHRASE=${PASS_PHRASE:-}
     depends_on:
-      mongo:
-        condition: service_healthy
+      - mongo
     networks:
       - opensign-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/app/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opensign-server.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.opensign-server.entrypoints=https"
+      - "traefik.http.routers.opensign-server.tls=true"
+      - "traefik.http.routers.opensign-server.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.opensign-server.middlewares=opensign-strip-api@docker"
+      - "traefik.http.middlewares.opensign-strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.services.opensign-server.loadbalancer.server.port=8080"
 
   client:
     image: opensign/opensign:main
@@ -55,29 +53,24 @@ services:
       - GENERATE_SOURCEMAP=false
       - REACT_APP_GTM=${REACT_APP_GTM:-}
     depends_on:
-      server:
-        condition: service_healthy
+      - server
     networks:
       - opensign-network
-
-  caddy:
-    image: caddy:latest
-    container_name: opensign-caddy
-    volumes:
-      - ./Caddyfile.coolify:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - client
-    networks:
-      - opensign-network
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opensign-client.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.opensign-client.entrypoints=https"
+      - "traefik.http.routers.opensign-client.tls=true"
+      - "traefik.http.routers.opensign-client.tls.certresolver=letsencrypt"
+      - "traefik.http.services.opensign-client.loadbalancer.server.port=3000"
 
 networks:
   opensign-network:
     driver: bridge
+  coolify:
+    external: true
 
 volumes:
   mongo-data:
   opensign-files:
-  caddy_data:
-  caddy_config:
