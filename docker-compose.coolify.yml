@@ -19,7 +19,7 @@ services:
       - APP_ID=${APP_ID:-opensign123456}
       - MASTER_KEY=${MASTER_KEY:-change-this-key}
       - MONGODB_URI=mongodb://mongo:27017/opensign
-      - PARSE_MOUNT=/app
+      - PARSE_MOUNT=/api/app
       - USE_LOCAL=TRUE
       - SMTP_ENABLE=${SMTP_ENABLE:-}
       - SMTP_HOST=${SMTP_HOST:-}
