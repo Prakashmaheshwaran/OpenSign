@@ -19,7 +19,7 @@ services:
       - APP_ID=${APP_ID:-opensign123456}
       - MASTER_KEY=${MASTER_KEY:-change-this-key}
       - MONGODB_URI=mongodb://mongo:27017/opensign
-      - PARSE_MOUNT=/app
+      - PARSE_MOUNT=/api/app
       - USE_LOCAL=TRUE
       - SMTP_ENABLE=${SMTP_ENABLE:-}
       - SMTP_HOST=${SMTP_HOST:-}
@@ -32,16 +32,6 @@ services:
       - mongo
     networks:
       - opensign-network
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.opensign-server.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.opensign-server.entrypoints=https"
-      - "traefik.http.routers.opensign-server.tls=true"
-      - "traefik.http.routers.opensign-server.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.opensign-server.middlewares=opensign-strip-api@docker"
-      - "traefik.http.middlewares.opensign-strip-api.stripprefix.prefixes=/api"
-      - "traefik.http.services.opensign-server.loadbalancer.server.port=8080"
 
   client:
     image: opensign/opensign:main
@@ -56,20 +46,10 @@ services:
       - server
     networks:
       - opensign-network
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.opensign-client.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.opensign-client.entrypoints=https"
-      - "traefik.http.routers.opensign-client.tls=true"
-      - "traefik.http.routers.opensign-client.tls.certresolver=letsencrypt"
-      - "traefik.http.services.opensign-client.loadbalancer.server.port=3000"
 
 networks:
   opensign-network:
     driver: bridge
-  coolify:
-    external: true
 
 volumes:
   mongo-data:
